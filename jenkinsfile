@@ -1,0 +1,43 @@
+pipeline {
+  agent any
+  
+  environment {
+    DOCKERHUB_CREDENTIALS = credentials('docker-creds')
+  }
+  
+  stages {
+    stage('Checkout') {
+      steps {
+        // Checkout your source code from version control
+        git branch: 'main', url: 'https://github.com/venkat31/sample-curl.git'
+      }
+    }
+    
+    stage('Build Docker Image') {
+      steps {
+        // Build the Docker image
+        sh 'docker build -t my-docker-image:latest .'
+      }
+    }
+    
+    stage('Login') {
+
+			steps {
+				sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
+			}
+		}
+    
+    stage('Push Docker Image') {
+    steps {
+    // Log in to Docker Hub and push the image
+    withCredentials([usernamePassword(credentialsId: 'docker-creds', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+      withDockerRegistry(credentialsId: 'docker-creds', url: '') {
+        sh "docker tag my-docker-image:latest ${DOCKER_USERNAME}/my-docker-image:latest"
+        sh "docker push ${DOCKER_USERNAME}/my-docker-image:latest"
+      }
+    }
+  }
+}
+
+  }
+}
